@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package propagator;
+
+service Prop {
+    rpc Put(PutReq) returns (Void) {}
+    rpc Get(GetReq) returns (Record) {}
+    rpc Mv(MvReq) returns (Void) {}
+    rpc Rm(RmReq) returns (Void) {}
+}
+
+message Void {
+}
+
+
+message PutReq {
+    string access_token = 1;
+    string path = 2;
+}
+
+message GetReq {
+    string access_token = 1;
+    string path = 2;
+    bool force_creation = 3;
+}
+
+message RmReq {
+    string access_token = 1;
+    string path = 2;
+}
+
+message MvReq {
+    string access_token = 1;
+    string src = 2;
+    string dst = 3;
+}
+
+message Record {
+    string path = 1;
+    uint32 modified = 2;
+    string etag = 3; 
+}
+
