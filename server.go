@@ -110,7 +110,8 @@ func (s *server) Get(ctx context.Context, req *pb.GetReq) (*pb.Record, error) {
 		log.Error(err)
 		return &pb.Record{}, err
 	}
-	if rec == nil {
+	//When Etag is not set or mtime is not set means that the record is not in Redis
+	if rec.ETag == "" || rec.MTime == 0 {
 		if !req.ForceCreation {
 			return &pb.Record{}, err
 		}
@@ -177,7 +178,6 @@ func (s *server) Mv(ctx context.Context, req *pb.MvReq) (*pb.Void, error) {
 	if err != nil {
 		log.Error(err)
 		return &pb.Void{}, nil
-
 	}
 
 	con := s.pool.Get()
@@ -195,7 +195,8 @@ func (s *server) Mv(ctx context.Context, req *pb.MvReq) (*pb.Void, error) {
 	for _, rec := range recs {
 		newPath := path.Join(dst, path.Clean(strings.TrimPrefix(rec.Path, src)))
 		log.Infof("src path %s will be renamed to %s", rec.Path, newPath)
-		con.Send("HSET", redis.Args{}.Add(rec.Path).AddFlat(rec)...)
+		con.Send("HMSET", newPath, "etag", rec.ETag, "mtime", rec.MTime)
+		con.Send("DEL", rec.Path)
 	}
 	_, err = con.Do("EXEC")
 	if err != nil {
@@ -246,9 +247,26 @@ func (s *server) getRecordsWithPathPrefix(p string) ([]record, error) {
 
 	// TODO(labkode) results can contain duplicated items, be sure to clean before return
 	for _, k := range items {
-		rec := record{}
-		rec.Path = k
-		recs = append(recs, rec)
+		con.Send("HGETALL", k)
+	}
+	err := con.Flush()
+	if err != nil {
+		return recs, err
+	}
+	for _, k := range items {
+		value, err := redis.Values(con.Receive())
+		if err != nil {
+			return recs, err
+		}
+		rus.Infof("val: %+v", value)
+		r := record{}
+		if err := redis.ScanStruct(value, &r); err != nil {
+			return recs, err
+		}
+		r.Path = k
+		if r.ETag != "" && r.MTime != 0 {
+			recs = append(recs, r)
+		}
 	}
 
 	return recs, nil
@@ -290,7 +308,7 @@ func (s *server) Rm(ctx context.Context, req *pb.RmReq) (*pb.Void, error) {
 	log.Infof("path is %s", p)
 
 	con := s.pool.Get()
-	_, err = con.Do("HDEL", p)
+	_, err = con.Do("DEL", p)
 	if err != nil {
 		log.Error(err)
 		return &pb.Void{}, err
@@ -378,7 +396,7 @@ func (s *server) getByPath(path string) (*record, error) {
 		return nil, err
 	}
 	r.Path = path
-	return r, err
+	return r, nil
 }
 
 func (s *server) insert(p, etag string, mtime uint32) error {
@@ -396,7 +414,7 @@ func (s *server) insert(p, etag string, mtime uint32) error {
 	r.ETag = etag
 	r.MTime = mtime
 
-	con.Send("HSET", redis.Args{}.Add(p).AddFlat(r)...)
+	con.Send("HMSET", p, "etag", r.ETag, "mtime", r.MTime)
 	_, err := con.Do("EXEC")
 	if err != nil {
 		return err
