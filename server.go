@@ -245,6 +245,9 @@ func (s *server) getRecordsWithPathPrefix(p string) ([]record, error) {
 		}
 	}
 
+	// the regex do not match the current path so we add it manually
+	items = append(items, p)
+
 	// TODO(labkode) results can contain duplicated items, be sure to clean before return
 	for _, k := range items {
 		con.Send("HGETALL", k)
@@ -258,7 +261,6 @@ func (s *server) getRecordsWithPathPrefix(p string) ([]record, error) {
 		if err != nil {
 			return recs, err
 		}
-		rus.Infof("val: %+v", value)
 		r := record{}
 		if err := redis.ScanStruct(value, &r); err != nil {
 			return recs, err
