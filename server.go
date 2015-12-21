@@ -2,8 +2,8 @@ package main
 
 import (
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/clawio/service.auth/lib"
-	pb "github.com/clawio/service.localstorexattr.propredis/proto/propagator"
+	"github.com/clawio/service-auth/lib"
+	pb "github.com/clawio/service-localfsxattr-redisprop/proto/propagator"
 	"github.com/garyburd/redigo/redis"
 	rus "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
