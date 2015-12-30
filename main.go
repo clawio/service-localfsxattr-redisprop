@@ -54,7 +54,7 @@ func printEnviron(e *environ) {
 	log.Infof("%s=%d", portEnvar, e.port)
 	log.Infof("%s=%s", sharedSecretEnvar, "******")
 	log.Infof("%s=%d", maxRedisIdleEnvar, e.maxRedisIdle)
-	log.Infof("%s=%d", maxRedisActive, e.maxRedisActiveEnvar)
+	log.Infof("%s=%d", maxRedisActiveEnvar, e.maxRedisActive)
 	log.Infof("%s=%d", portEnvar, e.port)
 }
 
