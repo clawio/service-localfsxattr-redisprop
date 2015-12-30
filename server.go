@@ -28,15 +28,18 @@ func (*debugLogger) Print(msg ...interface{}) {
 }
 
 type newServerParams struct {
-	dsn          string
-	sharedSecret string
-	pool         *redis.Pool
+	dsn            string
+	sharedSecret   string
+	maxRedisIdle   int
+	maxRedisActive int
+	pool           *redis.Pool
 }
 
 func newServer(p *newServerParams) (*server, error) {
 	pool := &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
+		MaxIdle:     p.maxRedisIdle,
+		MaxActive:   p.maxRedisActive,
+		IdleTimeout: 0,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", p.dsn)
 			if err != nil {

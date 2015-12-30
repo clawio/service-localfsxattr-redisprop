@@ -12,21 +12,35 @@ import (
 )
 
 const (
-	serviceID         = "CLAWIO_LOCALFSXATTR_REDISPROP"
-	dsnEnvar          = serviceID + "_DSN"
-	portEnvar         = serviceID + "_PORT"
-	sharedSecretEnvar = "CLAWIO_SHAREDSECRET"
+	serviceID           = "CLAWIO_LOCALFSXATTR_REDISPROP"
+	dsnEnvar            = serviceID + "_DSN"
+	portEnvar           = serviceID + "_PORT"
+	maxRedisIdleEnvar   = serviceID + "_MAXREDISIDLE"
+	maxRedisActiveEnvar = serviceID + "_MAXREDISACTIVE"
+	sharedSecretEnvar   = "CLAWIO_SHAREDSECRET"
 )
 
 type environ struct {
-	dsn          string
-	port         int
-	sharedSecret string
+	dsn            string
+	port           int
+	maxRedisIdle   int
+	maxRedisActive int
+	sharedSecret   string
 }
 
 func getEnviron() (*environ, error) {
 	e := &environ{}
 	e.dsn = os.Getenv(dsnEnvar)
+	maxRedisActive, err := strconv.Atoi(os.Getenv(maxRedisActiveEnvar))
+	if err != nil {
+		return nil, err
+	}
+	e.maxRedisActive = maxRedisActive
+	maxRedisIdle, err := strconv.Atoi(os.Getenv(maxRedisIdleEnvar))
+	if err != nil {
+		return nil, err
+	}
+	e.maxRedisIdle = maxRedisIdle
 	port, err := strconv.Atoi(os.Getenv(portEnvar))
 	if err != nil {
 		return nil, err
@@ -39,6 +53,9 @@ func printEnviron(e *environ) {
 	log.Infof("%s=%s", dsnEnvar, e.dsn)
 	log.Infof("%s=%d", portEnvar, e.port)
 	log.Infof("%s=%s", sharedSecretEnvar, "******")
+	log.Infof("%s=%d", maxRedisIdleEnvar, e.maxRedisIdle)
+	log.Infof("%s=%d", maxRedisActive, e.maxRedisActiveEnvar)
+	log.Infof("%s=%d", portEnvar, e.port)
 }
 
 func main() {
@@ -56,6 +73,8 @@ func main() {
 	p := &newServerParams{}
 	p.dsn = env.dsn
 	p.sharedSecret = env.sharedSecret
+	p.maxRedisIdle = env.maxRedisIdle
+	p.maxRedisActive = env.maxRedisActive
 
 	srv, err := newServer(p)
 	if err != nil {
