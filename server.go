@@ -229,6 +229,7 @@ func (s *server) getRecordsWithPathPrefix(p string) ([]record, error) {
 	)
 
 	con := s.pool.Get()
+	defer con.Close()
 	results := make([]string, 0)
 
 	for {
@@ -314,6 +315,7 @@ func (s *server) Rm(ctx context.Context, req *pb.RmReq) (*pb.Void, error) {
 	log.Infof("path is %s", p)
 
 	con := s.pool.Get()
+	defer con.Close()
 	_, err = con.Do("DEL", p)
 	if err != nil {
 		log.Error(err)
@@ -393,6 +395,7 @@ func (s *server) Put(ctx context.Context, req *pb.PutReq) (*pb.Void, error) {
 func (s *server) getByPath(path string) (*record, error) {
 
 	con := s.pool.Get()
+	defer con.Close()
 	v, err := redis.Values(con.Do("HGETALL", path))
 	if err != nil {
 		return nil, err
