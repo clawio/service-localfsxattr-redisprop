@@ -37,6 +37,7 @@ type newServerParams struct {
 
 func newServer(p *newServerParams) (*server, error) {
 	pool := &redis.Pool{
+		Wait:        true,
 		MaxIdle:     p.maxRedisIdle,
 		MaxActive:   p.maxRedisActive,
 		IdleTimeout: 0,
