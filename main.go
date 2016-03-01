@@ -15,6 +15,7 @@ const (
 	serviceID           = "CLAWIO_LOCALFSXATTR_REDISPROP"
 	dsnEnvar            = serviceID + "_DSN"
 	portEnvar           = serviceID + "_PORT"
+	logLevelEnvar       = serviceID + "_PORT"
 	maxRedisIdleEnvar   = serviceID + "_MAXREDISIDLE"
 	maxRedisActiveEnvar = serviceID + "_MAXREDISACTIVE"
 	sharedSecretEnvar   = "CLAWIO_SHAREDSECRET"
@@ -23,6 +24,7 @@ const (
 type environ struct {
 	dsn            string
 	port           int
+	logLevel       string
 	maxRedisIdle   int
 	maxRedisActive int
 	sharedSecret   string
@@ -45,6 +47,7 @@ func getEnviron() (*environ, error) {
 	if err != nil {
 		return nil, err
 	}
+	e.logLevel = os.Getenv(logLevelEnvar)
 	e.port = port
 	e.sharedSecret = os.Getenv(sharedSecretEnvar)
 	return e, nil
@@ -60,7 +63,6 @@ func printEnviron(e *environ) {
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	log.Infof("Service %s started", serviceID)
 
 	env, err := getEnviron()
 	if err != nil {
@@ -68,7 +70,15 @@ func main() {
 		os.Exit(1)
 	}
 
+        l, err := log.ParseLevel(env.logLevel) 
+        if err != nil { 
+                l = log.ErrorLevel 
+        } 
+        log.SetLevel(l) 
+
+
 	printEnviron(env)
+	log.Infof("Service %s started", serviceID)
 
 	p := &newServerParams{}
 	p.dsn = env.dsn

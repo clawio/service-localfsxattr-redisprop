@@ -1,7 +1,7 @@
 package main
 
 import (
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/nu7hatch/gouuid"
 	"github.com/clawio/service-auth/lib"
 	pb "github.com/clawio/service-localfsxattr-redisprop/proto/propagator"
 	"github.com/garyburd/redigo/redis"
@@ -73,7 +73,11 @@ type server struct {
 
 func (s *server) Get(ctx context.Context, req *pb.GetReq) (*pb.Record, error) {
 
-	traceID := getGRPCTraceID(ctx)
+	traceID, err := getGRPCTraceID(ctx)
+	if err != nil {
+		rus.Error(err)
+		return &pb.Record{}, err
+	}
 	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
 	ctx = newGRPCTraceContext(ctx, traceID)
 
@@ -142,7 +146,11 @@ func (s *server) Get(ctx context.Context, req *pb.GetReq) (*pb.Record, error) {
 
 func (s *server) Mv(ctx context.Context, req *pb.MvReq) (*pb.Void, error) {
 
-	traceID := getGRPCTraceID(ctx)
+	traceID, err := getGRPCTraceID(ctx)
+	if err != nil {
+		rus.Error(err)
+		return &pb.Void{}, err
+	}
 	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
 	ctx = newGRPCTraceContext(ctx, traceID)
 
@@ -208,8 +216,12 @@ func (s *server) Mv(ctx context.Context, req *pb.MvReq) (*pb.Void, error) {
 	}
 
 	log.Infof("renamed %d entries", len(recs))
-
-	etag := uuid.New()
+	
+	rawUUID, err := uuid.NewV4()
+	if err != nil {
+		return &pb.Void{}, err
+	}
+	etag := rawUUID.String()
 	mtime := uint32(time.Now().Unix())
 	err = s.propagateChanges(ctx, dst, etag, mtime, "")
 	if err != nil {
@@ -280,7 +292,15 @@ func (s *server) getRecordsWithPathPrefix(p string) ([]record, error) {
 }
 func (s *server) Rm(ctx context.Context, req *pb.RmReq) (*pb.Void, error) {
 
-	traceID := getGRPCTraceID(ctx)
+	traceID, err := getGRPCTraceID(ctx)
+	if err != nil {
+		rus.Error(err)
+		return &pb.Void{}, err
+	}
+	if err != nil {
+		rus.Error(err)
+		return &pb.Void{}, err
+	}
 	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
 	ctx = newGRPCTraceContext(ctx, traceID)
 
@@ -323,7 +343,11 @@ func (s *server) Rm(ctx context.Context, req *pb.RmReq) (*pb.Void, error) {
 	}
 
 	ts := time.Now().Unix()
-	err = s.propagateChanges(ctx, p, uuid.New(), uint32(ts), "")
+	rawUUID, err := uuid.NewV4()
+	if err != nil {
+		return &pb.Void{}, err
+	}
+	err = s.propagateChanges(ctx, p, rawUUID.String(), uint32(ts), "")
 	if err != nil {
 		log.Error(err)
 	}
@@ -334,7 +358,15 @@ func (s *server) Rm(ctx context.Context, req *pb.RmReq) (*pb.Void, error) {
 
 func (s *server) Put(ctx context.Context, req *pb.PutReq) (*pb.Void, error) {
 
-	traceID := getGRPCTraceID(ctx)
+	traceID, err := getGRPCTraceID(ctx)
+	if err != nil {
+		rus.Error(err)
+		return &pb.Void{}, err
+	}
+	if err != nil {
+		rus.Error(err)
+		return &pb.Void{}, err
+	}
 	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
 	ctx = newGRPCTraceContext(ctx, traceID)
 
@@ -368,7 +400,11 @@ func (s *server) Put(ctx context.Context, req *pb.PutReq) (*pb.Void, error) {
 
 	log.Infof("path is %s", p)
 
-	var etag = uuid.New()
+	rawUUID, err := uuid.NewV4()
+	if err != nil {
+		return &pb.Void{}, err
+	}
+	var etag = rawUUID.String()
 	var mtime = uint32(time.Now().Unix())
 
 	log.Infof("new record will have path=%s etag=%s mtime=%d", p, etag, mtime)
@@ -447,7 +483,11 @@ func (s *server) update(p, etag string, mtime uint32) int64 {
 //    - /local/users/d/demo
 func (s *server) propagateChanges(ctx context.Context, p, etag string, mtime uint32, stopPath string) error {
 
-	traceID := getGRPCTraceID(ctx)
+	traceID, err := getGRPCTraceID(ctx)
+	if err != nil {
+		rus.Error(err)
+		return err
+	}
 	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
 	ctx = newGRPCTraceContext(ctx, traceID)
 
@@ -469,10 +509,6 @@ func (s *server) propagateChanges(ctx context.Context, p, etag string, mtime uin
 }
 
 func getPathsTillHome(ctx context.Context, p string) []string {
-
-	traceID := getGRPCTraceID(ctx)
-	log := rus.WithField("trace", traceID).WithField("svc", serviceID)
-	ctx = newGRPCTraceContext(ctx, traceID)
 
 	paths := []string{}
 	tokens := strings.Split(p, "/")
@@ -505,7 +541,5 @@ func getPathsTillHome(ctx context.Context, p string) []string {
 		paths[i], paths[opp] = paths[opp], paths[i]
 
 	}
-	log.Infof("paths for update %+v", paths)
-
 	return paths
 }
